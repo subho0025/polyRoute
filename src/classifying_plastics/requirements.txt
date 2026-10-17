@@ -1,0 +1,11 @@
+# Pure TensorFlow Solution Requirements
+# Completely free of PyTorch / torch dependencies
+tensorflow>=2.16.0
+keras>=3.0.0
+numpy>=1.24.0
+Pillow>=9.5.0
+scikit-learn>=1.2.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+nbformat>=5.9.0
+ipykernel>=6.20.0
