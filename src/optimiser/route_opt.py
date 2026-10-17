@@ -1,5 +1,5 @@
 import pulp
-
+ 
 def optimize_routes(composition_data, limits, factors):
     """
     Optimizes plastic waste routing based on PuLP linear programming.
@@ -48,8 +48,8 @@ def optimize_routes(composition_data, limits, factors):
         prob += pulp.lpSum([x[(p, "landfill")] for p in polymers if (p, "landfill") in x]) <= limits["landfill_cap_kg"]
         
     status = prob.solve(pulp.GLPK_CMD(msg=False))
-    
-    if "Optimal" not in str(status):
+
+    if pulp.LpStatus[status] != "Optimal":
         return {
             "error": (
                 f"Infeasible: The plastic batch weight ({total_plastic_weight} kg) exceeds available facility capacities. "

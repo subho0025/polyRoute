@@ -1,0 +1,33 @@
+polymer,route,warm_material,warm_mtco2e_per_short_ton,kg_co2e_per_kg,source
+PET,recycle,PET,-1.04,-1.1464,WARM v16 Exhibit 5-3
+PET,compost,PET,NA,,WARM v16 Exhibit 5-3
+PET,combust,PET,1.24,1.3669,WARM v16 Exhibit 5-3
+PET,landfill,PET,0.02,0.022,WARM v16 Exhibit 5-3
+HDPE,recycle,HDPE,-0.76,-0.8378,WARM v16 Exhibit 5-3
+HDPE,compost,HDPE,NA,,WARM v16 Exhibit 5-3
+HDPE,combust,HDPE,1.29,1.422,WARM v16 Exhibit 5-3
+HDPE,landfill,HDPE,0.02,0.022,WARM v16 Exhibit 5-3
+PVC,recycle,PVC,NA,,WARM v16 Exhibit 5-3
+PVC,compost,PVC,NA,,WARM v16 Exhibit 5-3
+PVC,combust,PVC,0.66,0.7275,WARM v16 Exhibit 5-3
+PVC,landfill,PVC,0.02,0.022,WARM v16 Exhibit 5-3
+LDPE,recycle,LDPE,NA,,WARM v16 Exhibit 5-3
+LDPE,compost,LDPE,NA,,WARM v16 Exhibit 5-3
+LDPE,combust,LDPE,1.29,1.422,WARM v16 Exhibit 5-3
+LDPE,landfill,LDPE,0.02,0.022,WARM v16 Exhibit 5-3
+PP,recycle,PP,-0.79,-0.8708,WARM v16 Exhibit 5-3
+PP,compost,PP,NA,,WARM v16 Exhibit 5-3
+PP,combust,PP,1.29,1.422,WARM v16 Exhibit 5-3
+PP,landfill,PP,0.02,0.022,WARM v16 Exhibit 5-3
+PS,recycle,PS,NA,,WARM v16 Exhibit 5-3
+PS,compost,PS,NA,,WARM v16 Exhibit 5-3
+PS,combust,PS,1.65,1.8188,WARM v16 Exhibit 5-3
+PS,landfill,PS,0.02,0.022,WARM v16 Exhibit 5-3
+Other,recycle,Mixed Plastics,-0.93,-1.0251,WARM v16 Exhibit 5-3
+Other,compost,Mixed Plastics,NA,,WARM v16 Exhibit 5-3
+Other,combust,Mixed Plastics,1.26,1.3889,WARM v16 Exhibit 5-3
+Other,landfill,Mixed Plastics,0.02,0.022,WARM v16 Exhibit 5-3
+PLA,recycle,PLA,NA,,WARM v16 Exhibit 4-4
+PLA,compost,PLA,-0.09,-0.0992,WARM v16 Exhibit 4-4
+PLA,combust,PLA,-0.63,-0.6945,WARM v16 Exhibit 4-4
+PLA,landfill,PLA,-1.64,-1.8078,WARM v16 Exhibit 4-4
