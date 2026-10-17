@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PolyRoute</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=6">
+  <style>
+    /* Critical inline safeguards to avoid cache or layout blowing out */
+    html, body { height: 100vh; overflow: hidden; margin: 0; }
+    .layout { height: calc(100vh - 44px); overflow: hidden; }
+    .results { height: 100%; overflow-y: auto; padding: 0.85rem 1.25rem; }
+    .pie-dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.35rem; }
+    .pie-card { background: #f8f9f8; border: 1px solid #c2cbc6; border-radius: 6px; padding: 0.6rem 0.8rem; display: flex; flex-direction: column; }
+    .pie-canvas-wrap { position: relative; width: 100%; height: 135px; max-height: 135px; }
+  </style>
+</head>
+<body>
+<header class="masthead">
+  <div class="masthead-inner">
+    <h1 class="brand">PolyRoute</h1>
+    <p class="tagline">Find the lowest-carbon route for every plastic in a batch.</p>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- ======================= inputs ======================= -->
+  <form class="inputs" method="post" action="{{ url_for('analyse') }}" enctype="multipart/form-data">
+    <fieldset>
+      <legend>Waste batch</legend>
+      <label for="sample_file">Classifier output</label>
+      <select id="sample_file" name="sample_file">
+        {% for s in samples %}
+          <option value="{{ s }}" {% if form.get('sample_file', 'medium_100.json') == s %}selected{% endif %}>{{ s }}</option>
+        {% else %}
+          <option value="">No samples – run python -m comp_analyzer.gen</option>
+        {% endfor %}
+      </select>
+      <label for="classifier_file" class="secondary">Or upload a classifier JSON file</label>
+      <input id="classifier_file" name="classifier_file" type="file" accept=".json,application/json">
+      <p class="hint">Photo upload arrives when the classifier is connected.</p>
+    </fieldset>
+
+    <fieldset class="weight">
+      <legend>How much does it weigh?</legend>
+      {% set mode = form.get('weight_mode', 'measured') %}
+      <label class="choice"><input type="radio" name="weight_mode" value="measured" {% if mode == 'measured' %}checked{% endif %}> Weighed</label>
+      <div class="field" data-mode="measured">
+        <label for="total_kg">Batch weight (kg)</label>
+        <input id="total_kg" name="total_kg" inputmode="decimal" value="{{ form.get('total_kg', '50') }}">
+      </div>
+      <label class="choice"><input type="radio" name="weight_mode" value="volume" {% if mode == 'volume' %}checked{% endif %}> Estimate from volume</label>
+      <div class="field" data-mode="volume">
+        <label for="volume_m3">Volume (m³)</label>
+        <input id="volume_m3" name="volume_m3" inputmode="decimal" value="{{ form.get('volume_m3', '') }}" placeholder="e.g. 1.2">
+      </div>
+      <label class="choice"><input type="radio" name="weight_mode" value="count" {% if mode == 'count' %}checked{% endif %}> Estimate from item count</label>
+      <div class="field" data-mode="count">
+        <label for="item_count">Number of items</label>
+        <input id="item_count" name="item_count" inputmode="numeric" value="{{ form.get('item_count', '') }}" placeholder="e.g. 2000">
+      </div>
+      <label class="choice"><input type="radio" name="weight_mode" value="photos" {% if mode == 'photos' %}checked{% endif %}> The photos show the whole batch</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Facility limits</legend>
+      <label for="recycle_cap_kg">Recycling capacity (kg)</label>
+      <input id="recycle_cap_kg" name="recycle_cap_kg" inputmode="decimal" value="{{ form.get('recycle_cap_kg', defaults.recycle_cap_kg|int) }}">
+      <label for="compost_cap_kg">Composting capacity (kg)</label>
+      <input id="compost_cap_kg" name="compost_cap_kg" inputmode="decimal" value="{{ form.get('compost_cap_kg', defaults.compost_cap_kg|int) }}">
+      <label for="landfill_cap_kg">Landfill limit (kg)</label>
+      <input id="landfill_cap_kg" name="landfill_cap_kg" inputmode="decimal" value="{{ form.get('landfill_cap_kg', defaults.landfill_cap_kg|int) }}">
+    </fieldset>
+
+    <button type="submit">Find routes</button>
+  </form>
+
+  <!-- ======================= results ======================= -->
+  <section class="results" aria-live="polite">
+    {% if error %}
+      <div class="message error" role="alert">
+        <h2>Couldn't route this batch</h2>
+        <p>{{ error }}</p>
+      </div>
+    {% elif not view %}
+      <div class="empty">
+        <h2>Route a batch</h2>
+        <p>Pick a classifier output, say how much the batch weighs, and set your facility limits.
+           Then select <strong>Find routes</strong> to see where each plastic should go and how much carbon that saves.</p>
+      </div>
+    {% else %}
+      {% set r = view.result %}
+      <div class="header-compact">
+        <p class="summary">
+          {% if not view.lanes %}
+            No plastic found in this {{ '%.1f'|format(r.total_kg) }} kg batch.
+          {% else %}
+            This {{ '%.1f'|format(r.total_kg) }} kg batch holds about
+            <strong>{{ '%.1f'|format(r.plastic_kg) }} kg of plastic</strong> across {{ view.lanes|length }} types.
+            {% if view.saved >= 0.05 %}
+              Saves <strong class="saving">{{ '%.1f'|format(view.saved) }} kg CO₂e</strong> vs landfill.
+            {% elif view.saved <= -0.05 %}
+              Emits <strong class="cost">{{ '%.1f'|format(-view.saved) }} kg CO₂e</strong> more than landfill.
+            {% else %}
+              Carbon is about the same as landfill.
+            {% endif %}
+          {% endif %}
+        </p>
+        <p class="provenance">
+          {{ view.n_items }} items from {{ view.source }}: {{ r.excluded.non_plastic }} non-plastic &amp; {{ r.excluded.uncertain }} unclear left out.
+          {% if r.total_kg_source == 'measured' %}Batch was weighed.{% else %}{{ {'volume': 'Vol. estimate', 'item_count': 'Count estimate', 'photos_only': 'Photo estimate'}[r.total_kg_source] }} ({{ r.total_kg_ci[0] }}–{{ r.total_kg_ci[1] }} kg).{% endif %}
+        </p>
+      </div>
+
+      {% if view.lanes %}
+      <section class="block where-plastics-go">
+        <h2>Where each plastic goes</h2>
+
+        {# Aggregate route sums #}
+        {% set route_totals = namespace(recycle=0.0, compost=0.0, combust=0.0, landfill=0.0, total=0.0) %}
+        {% for lane in view.lanes %}
+          {% for s in lane.segments %}
+            {% if s.route == 'recycle' %}
+              {% set route_totals.recycle = route_totals.recycle + s.kg %}
+            {% elif s.route == 'compost' %}
+              {% set route_totals.compost = route_totals.compost + s.kg %}
+            {% elif s.route == 'combust' %}
+              {% set route_totals.combust = route_totals.combust + s.kg %}
+            {% elif s.route == 'landfill' %}
+              {% set route_totals.landfill = route_totals.landfill + s.kg %}
+            {% endif %}
+            {% set route_totals.total = route_totals.total + s.kg %}
+          {% endfor %}
+        {% endfor %}
+
+        <div class="pie-dashboard">
+          <!-- PIE CHART 1: DESTINATIONS -->
+          <div class="pie-card">
+            <div class="pie-card-header">
+              <span class="pie-card-title">Where it goes</span>
+              <span class="pie-card-sub">By destination route</span>
+            </div>
+            <div class="pie-canvas-wrap">
+              <canvas id="routePieChart"></canvas>
+            </div>
+            <ul class="legend pie-legend">
+              {% for route in view.routes_used %}
+                {% set r_kg = (route_totals.recycle if route == 'recycle' else (route_totals.compost if route == 'compost' else (route_totals.combust if route == 'combust' else route_totals.landfill))) %}
+                {% set r_pct = (r_kg / (route_totals.total if route_totals.total > 0 else 1) * 100) %}
+                <li class="pie-legend-item">
+                  <span class="swatch route-{{ route }}"></span>
+                  <span class="pie-legend-name">{{ view.route_labels[route] }}</span>
+                  <span class="pie-legend-kg">{{ '%.2f'|format(r_kg) }} kg</span>
+                  <span class="pie-legend-pct">{{ '%.1f'|format(r_pct) }}%</span>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <!-- PIE CHART 2: POLYMERS -->
+          <div class="pie-card">
+            <div class="pie-card-header">
+              <span class="pie-card-title">What is in the batch</span>
+              <span class="pie-card-sub">By plastic type</span>
+            </div>
+            <div class="pie-canvas-wrap">
+              <canvas id="polymerPieChart"></canvas>
+            </div>
+            <ul class="legend pie-legend polymer-legend">
+              {% for lane in view.lanes %}
+                {% set p_pct = (lane.kg / (r.plastic_kg if r.plastic_kg > 0 else 1) * 100) %}
+                <li class="pie-legend-item">
+                  <span class="swatch polymer-swatch-{{ loop.index0 % 8 }}"></span>
+                  <span class="pie-legend-name" title="{{ lane.name }}">{{ lane.polymer }}</span>
+                  <span class="pie-legend-kg">{{ '%.2f'|format(lane.kg) }} kg</span>
+                  <span class="pie-legend-pct">{{ '%.1f'|format(p_pct) }}%</span>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="block carbon-block">
+        <h2>Carbon compared with landfill</h2>
+        <div class="carbon">
+          {% for c in view.carbon %}
+          <div class="carbon-row">
+            <span class="carbon-label">{{ c.label }}</span>
+            <div class="carbon-track">
+              <span class="carbon-bar {{ 'neg' if c.value < 0 else 'pos' }}" style="width: {{ '%.1f'|format(c.width) }}%"></span>
+            </div>
+            <span class="carbon-value">{{ '%+.1f'|format(c.value) }} kg CO₂e</span>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="block plan-block">
+        <h2>Why this plan</h2>
+        <p class="explanation">{{ view.explanation }}</p>
+        {% for note in view.notes %}<p class="note">{{ note }}</p>{% endfor %}
+      </section>
+      {% endif %}
+
+      {% set warnings = r.warnings if view.lanes else r.warnings|reject('equalto', 'No plastic items found in the sample.')|list %}
+      {% if warnings or view.placeholders %}
+      <section class="block cautions">
+        {% for w in warnings %}<p class="message warn">{{ w }}</p>{% endfor %}
+        {% if view.placeholders %}
+          <p class="message demo">Demo values in use: {{ view.placeholders|join(', ') }}.</p>
+        {% endif %}
+      </section>
+      {% endif %}
+    {% endif %}
+  </section>
+</main>
+
+<footer class="footer">
+  {% if machine == 's390x' %}IBM LinuxONE ({{ machine }}){% else %}Development machine ({{ machine }}){% endif %}
+</footer>
+
+<script>
+  // Sync weight mode radio
+  const radios = document.querySelectorAll('input[name="weight_mode"]');
+  function sync() {
+    const mode = document.querySelector('input[name="weight_mode"]:checked').value;
+    document.querySelectorAll('.weight .field').forEach(f => { f.hidden = f.dataset.mode !== mode; });
+  }
+  radios.forEach(r => r.addEventListener('change', sync));
+  sync();
+
+  {% if view and view.lanes %}
+  document.addEventListener('DOMContentLoaded', function() {
+    const styles = getComputedStyle(document.documentElement);
+
+    // --- 1. Destination Route Pie Chart ---
+    const routeCanvas = document.getElementById('routePieChart');
+    if (routeCanvas && typeof Chart !== 'undefined') {
+      const colorMap = {
+        recycle:  styles.getPropertyValue('--recycle').trim()  || '#2b7a56',
+        compost:  styles.getPropertyValue('--compost').trim()  || '#8b9a3a',
+        combust:  styles.getPropertyValue('--combust').trim()  || '#c5612c',
+        landfill: styles.getPropertyValue('--landfill').trim() || '#7a5b44'
+      };
+
+      const routes = [{% for route in view.routes_used %}"{{ route }}"{% if not loop.last %}, {% endif %}{% endfor %}];
+      const routeLabels = [{% for route in view.routes_used %}"{{ view.route_labels[route] }}"{% if not loop.last %}, {% endif %}{% endfor %}];
+      const routeData = [
+        {% for route in view.routes_used %}
+          {% set r_kg = (route_totals.recycle if route == 'recycle' else (route_totals.compost if route == 'compost' else (route_totals.combust if route == 'combust' else route_totals.landfill))) %}
+          {{ '%.2f'|format(r_kg) }}{% if not loop.last %}, {% endif %}
+        {% endfor %}
+      ];
+
+      new Chart(routeCanvas.getContext('2d'), {
+        type: 'pie',
+        data: {
+          labels: routeLabels,
+          datasets: [{
+            data: routeData,
+            backgroundColor: routes.map(r => colorMap[r] || '#7a5b44'),
+            borderWidth: 2,
+            borderColor: '#ffffff',
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  const val = Number(ctx.parsed) || 0;
+                  const total = ctx.dataset.data.reduce((a, b) => Number(a) + Number(b), 0);
+                  const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                  return ` ${ctx.label}: ${val.toFixed(2)} kg (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // --- 2. Polymer Breakdown Pie Chart ---
+    const polymerCanvas = document.getElementById('polymerPieChart');
+    if (polymerCanvas && typeof Chart !== 'undefined') {
+      const polymerPalette = [
+        '#1f6fb2', '#208b8b', '#d97724', '#7c3aed', 
+        '#db2777', '#059669', '#ca8a04', '#475569'
+      ];
+
+      const polymerLabels = [{% for lane in view.lanes %}"{{ lane.polymer }} - {{ lane.name }}"{% if not loop.last %}, {% endif %}{% endfor %}];
+      const polymerData = [{% for lane in view.lanes %}{{ '%.2f'|format(lane.kg) }}{% if not loop.last %}, {% endif %}{% endfor %}];
+
+      new Chart(polymerCanvas.getContext('2d'), {
+        type: 'pie',
+        data: {
+          labels: polymerLabels,
+          datasets: [{
+            data: polymerData,
+            backgroundColor: polymerData.map((_, i) => polymerPalette[i % polymerPalette.length]),
+            borderWidth: 2,
+            borderColor: '#ffffff',
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  const val = Number(ctx.parsed) || 0;
+                  const total = ctx.dataset.data.reduce((a, b) => Number(a) + Number(b), 0);
+                  const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                  return ` ${ctx.label}: ${val.toFixed(2)} kg (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  });
+  {% endif %}
+</script>
+</body>
+</html>
