@@ -1,0 +1,256 @@
+[
+    {
+        "scenario_id": 1,
+        "scenario_name": "Standard Mixed Batch",
+        "input_weights_kg": {
+            "PET": 3.33,
+            "HDPE": 14.17,
+            "PP": 15.83,
+            "PVC": 16.67
+        },
+        "output": {
+            "plan": {
+                "PET": {
+                    "recycle": 3.33
+                },
+                "HDPE": {
+                    "recycle": 14.17
+                },
+                "PP": {
+                    "recycle": 15.83
+                },
+                "PVC": {
+                    "landfill": 15.0,
+                    "combust": 1.67
+                }
+            },
+            "optimised_kgco2e": -24.49,
+            "baseline_kgco2e": 6.67,
+            "saved_kgco2e": 31.16,
+            "notes": [
+                "PVC: no recycling factor in WARM, routed to other facilities."
+            ]
+        }
+    },
+    {
+        "scenario_id": 2,
+        "scenario_name": "PET Heavy Batch",
+        "input_weights_kg": {
+            "PET": 32.73,
+            "HDPE": 7.27
+        },
+        "output": {
+            "plan": {
+                "PET": {
+                    "recycle": 32.73
+                },
+                "HDPE": {
+                    "recycle": 7.27
+                }
+            },
+            "optimised_kgco2e": -46.55,
+            "baseline_kgco2e": 4.0,
+            "saved_kgco2e": 50.55,
+            "notes": []
+        }
+    },
+    {
+        "scenario_id": 3,
+        "scenario_name": "Unrecyclable High-PVC Batch",
+        "input_weights_kg": {
+            "PVC": 16.97,
+            "PP": 18.03
+        },
+        "output": {
+            "plan": {
+                "PVC": {
+                    "landfill": 15.0,
+                    "combust": 1.97
+                },
+                "PP": {
+                    "recycle": 18.03
+                }
+            },
+            "optimised_kgco2e": -7.48,
+            "baseline_kgco2e": 5.2,
+            "saved_kgco2e": 12.68,
+            "notes": [
+                "PVC: no recycling factor in WARM, routed to other facilities."
+            ]
+        }
+    },
+    {
+        "scenario_id": 4,
+        "scenario_name": "Large Scale Batch (Exceeds Caps)",
+        "input_weights_kg": {
+            "PET": 20.8,
+            "HDPE": 8.0,
+            "PP": 30.4,
+            "PVC": 25.6,
+            "LDPE": 6.4,
+            "PS": 28.8
+        },
+        "output": {
+            "plan": {
+                "PET": {
+                    "recycle": 20.8
+                },
+                "HDPE": {
+                    "combust": 8.0
+                },
+                "PP": {
+                    "combust": 30.4
+                },
+                "PVC": {
+                    "landfill": 15.0,
+                    "combust": 10.6
+                },
+                "LDPE": {
+                    "combust": 6.4
+                },
+                "PS": {
+                    "recycle": 19.2,
+                    "combust": 9.6
+                }
+            },
+            "optimised_kgco2e": 55.4,
+            "baseline_kgco2e": 14.56,
+            "saved_kgco2e": -40.84,
+            "notes": [
+                "PVC: no recycling factor in WARM, routed to other facilities."
+            ]
+        }
+    },
+    {
+        "scenario_id": 5,
+        "scenario_name": "Small Batch",
+        "input_weights_kg": {
+            "PET": 0.88,
+            "PP": 14.12
+        },
+        "output": {
+            "plan": {
+                "PET": {
+                    "recycle": 0.88
+                },
+                "PP": {
+                    "recycle": 14.12
+                }
+            },
+            "optimised_kgco2e": -12.35,
+            "baseline_kgco2e": 1.5,
+            "saved_kgco2e": 13.85,
+            "notes": []
+        }
+    },
+    {
+        "scenario_id": 6,
+        "scenario_name": "Edge Case: The Empty Batch",
+        "input_weights_kg": {},
+        "output": {
+            "plan": {},
+            "optimised_kgco2e": 0.0,
+            "baseline_kgco2e": 0.0,
+            "saved_kgco2e": 0.0,
+            "notes": [
+                "Empty or zero-weight batch received."
+            ]
+        }
+    },
+    {
+        "scenario_id": 7,
+        "scenario_name": "Edge Case: 100% Unrecyclable Overflow",
+        "input_weights_kg": {
+            "PVC": 100.0,
+            "Other": 50.0
+        },
+        "output": {
+            "plan": {
+                "PVC": {
+                    "landfill": 15.0,
+                    "combust": 85.0
+                },
+                "Other": {
+                    "combust": 50.0
+                }
+            },
+            "optimised_kgco2e": 248.0,
+            "baseline_kgco2e": 25.0,
+            "saved_kgco2e": -223.0,
+            "notes": [
+                "PVC: no recycling factor in WARM, routed to other facilities.",
+                "Other: no recycling factor in WARM, routed to other facilities."
+            ]
+        }
+    },
+    {
+        "scenario_id": 8,
+        "scenario_name": "Edge Case: Exact Capacity Lock",
+        "input_weights_kg": {
+            "PET": 40.0,
+            "PVC": 15.0
+        },
+        "output": {
+            "plan": {
+                "PET": {
+                    "recycle": 40.0
+                },
+                "PVC": {
+                    "landfill": 15.0
+                }
+            },
+            "optimised_kgco2e": -45.0,
+            "baseline_kgco2e": 7.0,
+            "saved_kgco2e": 52.0,
+            "notes": [
+                "PVC: no recycling factor in WARM, routed to other facilities."
+            ]
+        }
+    },
+    {
+        "scenario_id": 9,
+        "scenario_name": "Edge Case: Micro-Weights",
+        "input_weights_kg": {
+            "PET": 0.001,
+            "HDPE": 0.005,
+            "PP": 0.002
+        },
+        "output": {
+            "plan": {
+                "PET": {
+                    "recycle": 0.0
+                },
+                "HDPE": {
+                    "recycle": 0.01
+                },
+                "PP": {
+                    "recycle": 0.0
+                }
+            },
+            "optimised_kgco2e": -0.01,
+            "baseline_kgco2e": 0.0,
+            "saved_kgco2e": 0.01,
+            "notes": []
+        }
+    },
+    {
+        "scenario_id": 10,
+        "scenario_name": "Edge Case: Single Massive Polymer",
+        "input_weights_kg": {
+            "HDPE": 1000.0
+        },
+        "output": {
+            "plan": {
+                "HDPE": {
+                    "recycle": 40.0,
+                    "landfill": 15.0,
+                    "combust": 945.0
+                }
+            },
+            "optimised_kgco2e": 1190.0,
+            "baseline_kgco2e": 100.0,
+            "saved_kgco2e": -1090.0,
+            "notes": []
+        }
+    }
+]
