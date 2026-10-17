@@ -1,0 +1,9 @@
+class,typical_item_mass_g,example_items,source
+PET,25,"water/soda bottles, clear food trays",PLACEHOLDER
+HDPE,40,"milk jugs, detergent bottles",PLACEHOLDER
+PVC,30,"blister packs, pipes offcuts",PLACEHOLDER
+LDPE,6,"carry bags, films, wraps",PLACEHOLDER
+PP,15,"food tubs, caps, cups",PLACEHOLDER
+PS,8,"foam cups, cutlery, trays",PLACEHOLDER
+Other,15,"mixed/multilayer, PLA",PLACEHOLDER
+non_plastic,150,"glass, metal cans, cardboard",PLACEHOLDER

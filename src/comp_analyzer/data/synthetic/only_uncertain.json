@@ -1,0 +1,62 @@
+[
+  {
+    "image": "img_0000.jpg",
+    "material": "uncertain",
+    "polymer": null,
+    "confidence": 0.42
+  },
+  {
+    "image": "img_0001.jpg",
+    "material": "uncertain",
+    "polymer": null,
+    "confidence": 0.5
+  },
+  {
+    "image": "img_0002.jpg",
+    "material": "uncertain",
+    "polymer": null,
+    "confidence": 0.43
+  },
+  {
+    "image": "img_0003.jpg",
+    "material": "uncertain",
+    "polymer": null,
+    "confidence": 0.57
+  },
+  {
+    "image": "img_0004.jpg",
+    "material": "uncertain",
+    "polymer": null,
+    "confidence": 0.35
+  },
+  {
+    "image": "img_0005.jpg",
+    "material": "uncertain",
+    "polymer": null,
+    "confidence": 0.59
+  },
+  {
+    "image": "img_0006.jpg",
+    "material": "uncertain",
+    "polymer": null,
+    "confidence": 0.39
+  },
+  {
+    "image": "img_0007.jpg",
+    "material": "uncertain",
+    "polymer": null,
+    "confidence": 0.41
+  },
+  {
+    "image": "img_0008.jpg",
+    "material": "uncertain",
+    "polymer": null,
+    "confidence": 0.4
+  },
+  {
+    "image": "img_0009.jpg",
+    "material": "uncertain",
+    "polymer": null,
+    "confidence": 0.45
+  }
+]

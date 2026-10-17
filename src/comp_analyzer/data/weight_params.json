@@ -1,0 +1,7 @@
+{
+  "source": "PLACEHOLDER - replace with sourced values",
+  "mass_cv": 0.5,
+  "mass_cv_note": "spread of individual item masses around the typical mass (coefficient of variation)",
+  "bulk_density_kg_m3": {"low": 25, "typical": 50, "high": 100},
+  "bulk_density_note": "loose, uncompacted mixed waste as collected; compacted waste is much denser"
+}

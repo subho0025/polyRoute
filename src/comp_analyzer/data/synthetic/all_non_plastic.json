@@ -1,0 +1,62 @@
+[
+  {
+    "image": "img_0000.jpg",
+    "material": "non_plastic",
+    "polymer": null,
+    "confidence": 0.85
+  },
+  {
+    "image": "img_0001.jpg",
+    "material": "non_plastic",
+    "polymer": null,
+    "confidence": 0.85
+  },
+  {
+    "image": "img_0002.jpg",
+    "material": "non_plastic",
+    "polymer": null,
+    "confidence": 0.75
+  },
+  {
+    "image": "img_0003.jpg",
+    "material": "non_plastic",
+    "polymer": null,
+    "confidence": 0.61
+  },
+  {
+    "image": "img_0004.jpg",
+    "material": "non_plastic",
+    "polymer": null,
+    "confidence": 0.74
+  },
+  {
+    "image": "img_0005.jpg",
+    "material": "non_plastic",
+    "polymer": null,
+    "confidence": 0.79
+  },
+  {
+    "image": "img_0006.jpg",
+    "material": "non_plastic",
+    "polymer": null,
+    "confidence": 0.77
+  },
+  {
+    "image": "img_0007.jpg",
+    "material": "non_plastic",
+    "polymer": null,
+    "confidence": 0.85
+  },
+  {
+    "image": "img_0008.jpg",
+    "material": "non_plastic",
+    "polymer": null,
+    "confidence": 0.63
+  },
+  {
+    "image": "img_0009.jpg",
+    "material": "non_plastic",
+    "polymer": null,
+    "confidence": 0.81
+  }
+]

@@ -1,0 +1,275 @@
+[
+  {
+    "image": "img_0000.jpg",
+    "material": "plastic",
+    "polymer": "LDPE",
+    "confidence": 0.87,
+    "probs": {
+      "PET": 0.0197,
+      "HDPE": 0.0266,
+      "PVC": 0.0193,
+      "LDPE": 0.8701,
+      "PP": 0.0254,
+      "PS": 0.022,
+      "Other": 0.0169
+    }
+  },
+  {
+    "image": "img_0001.jpg",
+    "material": "plastic",
+    "polymer": "PS",
+    "confidence": 0.72,
+    "probs": {
+      "PET": 0.0939,
+      "HDPE": 0.0289,
+      "PVC": 0.0256,
+      "LDPE": 0.0587,
+      "PP": 0.0455,
+      "PS": 0.72,
+      "Other": 0.0274
+    }
+  },
+  {
+    "image": "img_0002.jpg",
+    "material": "plastic",
+    "polymer": "HDPE",
+    "confidence": 0.74,
+    "probs": {
+      "PET": 0.0303,
+      "HDPE": 0.74,
+      "PVC": 0.0621,
+      "LDPE": 0.0681,
+      "PP": 0.0255,
+      "PS": 0.041,
+      "Other": 0.033
+    }
+  },
+  {
+    "image": "img_0003.jpg",
+    "material": "plastic",
+    "polymer": "LDPE",
+    "confidence": 0.65,
+    "probs": {
+      "PET": 0.0309,
+      "HDPE": 0.0654,
+      "PVC": 0.1013,
+      "LDPE": 0.6499,
+      "PP": 0.0341,
+      "PS": 0.033,
+      "Other": 0.0854
+    }
+  },
+  {
+    "image": "img_0004.jpg",
+    "material": "plastic",
+    "polymer": "LDPE",
+    "confidence": 0.67,
+    "probs": {
+      "PET": 0.0756,
+      "HDPE": 0.0444,
+      "PVC": 0.0835,
+      "LDPE": 0.67,
+      "PP": 0.0612,
+      "PS": 0.0417,
+      "Other": 0.0236
+    }
+  },
+  {
+    "image": "img_0005.jpg",
+    "material": "plastic",
+    "polymer": "LDPE",
+    "confidence": 0.76,
+    "probs": {
+      "PET": 0.0853,
+      "HDPE": 0.055,
+      "PVC": 0.0726,
+      "LDPE": 0.76,
+      "PP": 0.0016,
+      "PS": 0.0122,
+      "Other": 0.0133
+    }
+  },
+  {
+    "image": "img_0006.jpg",
+    "material": "plastic",
+    "polymer": "PET",
+    "confidence": 0.73,
+    "probs": {
+      "PET": 0.73,
+      "HDPE": 0.0528,
+      "PVC": 0.0688,
+      "LDPE": 0.0076,
+      "PP": 0.0834,
+      "PS": 0.0325,
+      "Other": 0.0249
+    }
+  },
+  {
+    "image": "img_0007.jpg",
+    "material": "plastic",
+    "polymer": "PS",
+    "confidence": 0.9,
+    "probs": {
+      "PET": 0.0091,
+      "HDPE": 0.035,
+      "PVC": 0.0033,
+      "LDPE": 0.0155,
+      "PP": 0.0367,
+      "PS": 0.9001,
+      "Other": 0.0003
+    }
+  },
+  {
+    "image": "img_0008.jpg",
+    "material": "plastic",
+    "polymer": "PP",
+    "confidence": 0.76,
+    "probs": {
+      "PET": 0.0444,
+      "HDPE": 0.0635,
+      "PVC": 0.0373,
+      "LDPE": 0.0101,
+      "PP": 0.76,
+      "PS": 0.0291,
+      "Other": 0.0556
+    }
+  },
+  {
+    "image": "img_0009.jpg",
+    "material": "plastic",
+    "polymer": "PP",
+    "confidence": 0.77,
+    "probs": {
+      "PET": 0.0293,
+      "HDPE": 0.0488,
+      "PVC": 0.0807,
+      "LDPE": 0.0454,
+      "PP": 0.77,
+      "PS": 0.0183,
+      "Other": 0.0075
+    }
+  },
+  {
+    "image": "img_0010.jpg",
+    "material": "plastic",
+    "polymer": "PP",
+    "confidence": 0.62,
+    "probs": {
+      "PET": 0.0809,
+      "HDPE": 0.0152,
+      "PVC": 0.0831,
+      "LDPE": 0.0571,
+      "PP": 0.6201,
+      "PS": 0.0636,
+      "Other": 0.08
+    }
+  },
+  {
+    "image": "img_0011.jpg",
+    "material": "non_plastic",
+    "polymer": null,
+    "confidence": 0.78
+  },
+  {
+    "image": "img_0012.jpg",
+    "material": "plastic",
+    "polymer": "LDPE",
+    "confidence": 0.9,
+    "probs": {
+      "PET": 0.0054,
+      "HDPE": 0.0092,
+      "PVC": 0.0244,
+      "LDPE": 0.9001,
+      "PP": 0.0088,
+      "PS": 0.0274,
+      "Other": 0.0247
+    }
+  },
+  {
+    "image": "img_0013.jpg",
+    "material": "plastic",
+    "polymer": "PET",
+    "confidence": 0.85,
+    "probs": {
+      "PET": 0.85,
+      "HDPE": 0.0539,
+      "PVC": 0.029,
+      "LDPE": 0.0102,
+      "PP": 0.0161,
+      "PS": 0.0331,
+      "Other": 0.0077
+    }
+  },
+  {
+    "image": "img_0014.jpg",
+    "material": "plastic",
+    "polymer": "PS",
+    "confidence": 0.83,
+    "probs": {
+      "PET": 0.029,
+      "HDPE": 0.0314,
+      "PVC": 0.0081,
+      "LDPE": 0.0087,
+      "PP": 0.0462,
+      "PS": 0.83,
+      "Other": 0.0466
+    }
+  },
+  {
+    "image": "img_0015.jpg",
+    "material": "plastic",
+    "polymer": "HDPE",
+    "confidence": 0.91,
+    "probs": {
+      "PET": 0.0029,
+      "HDPE": 0.91,
+      "PVC": 0.0146,
+      "LDPE": 0.0157,
+      "PP": 0.0015,
+      "PS": 0.024,
+      "Other": 0.0313
+    }
+  },
+  {
+    "image": "img_0016.jpg",
+    "material": "non_plastic",
+    "polymer": null,
+    "confidence": 0.8
+  },
+  {
+    "image": "img_0017.jpg",
+    "material": "plastic",
+    "polymer": "LDPE",
+    "confidence": 0.76,
+    "probs": {
+      "PET": 0.0464,
+      "HDPE": 0.0617,
+      "PVC": 0.0073,
+      "LDPE": 0.76,
+      "PP": 0.0091,
+      "PS": 0.0548,
+      "Other": 0.0607
+    }
+  },
+  {
+    "image": "img_0018.jpg",
+    "material": "plastic",
+    "polymer": "HDPE",
+    "confidence": 0.95,
+    "probs": {
+      "PET": 0.0096,
+      "HDPE": 0.9501,
+      "PVC": 0.0094,
+      "LDPE": 0.0102,
+      "PP": 0.0025,
+      "PS": 0.0083,
+      "Other": 0.0099
+    }
+  },
+  {
+    "image": "img_0019.jpg",
+    "material": "uncertain",
+    "polymer": null,
+    "confidence": 0.34
+  }
+]
