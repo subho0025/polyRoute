@@ -80,12 +80,13 @@ def run(form, files):
                                   confusion=CONFUSION, weight_params=WEIGHT_PARAMS)
     composition_data = to_optimiser_input(result)["composition_data"]
     plan_result = integrations.run_optimiser(composition_data, limits)
-    explanation = integrations.explain_plan(plan_result)
+    explanation = integrations.explain_plan(composition_data, plan_result, source)
 
     return build_view(result, plan_result, explanation, limits, source, len(items))
 
 
 def build_view(result, plan_result, explanation, limits, source, n_items):
+    """explanation = (text, source, seconds) from integrations.explain_plan."""
     """Everything the template needs, pre-computed (widths, labels, signs)."""
     kg = result["kg"]
     biggest = max(kg.values(), default=0) or 1
@@ -112,16 +113,15 @@ def build_view(result, plan_result, explanation, limits, source, n_items):
 
     placeholders = [name for flag, name in [
         (MASSES_PLACEHOLDER, "typical item masses"), (CONFUSION_SYNTHETIC, "classifier confusion matrix"),
-        (WEIGHT_PLACEHOLDER, "weight parameters")] if flag]
-    if plan_result.get("is_standin"):
-        placeholders.append("route optimiser and emission factors (stand-in)")
+        (WEIGHT_PLACEHOLDER, "weight parameters")] if flag]    
 
     return {
         "source": source, "n_items": n_items, "result": result, "lanes": lanes,
         "routes_used": [r for r in ROUTES if any(s["route"] == r for l in lanes for s in l["segments"])],
         "route_labels": ROUTE_LABELS, "carbon": carbon,
         "saved": plan_result["saved_kgco2e"], "notes": plan_result.get("notes", []),
-        "explanation": explanation, "limits": limits, "placeholders": placeholders,
+        "explanation": explanation[0], "explained_by": explanation[1], "explain_seconds": explanation[2],
+        "factors_source": integrations.FACTORS_SOURCE, "limits": limits, "placeholders": placeholders,
     }
 
 
