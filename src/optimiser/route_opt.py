@@ -28,7 +28,10 @@ def optimize_routes(composition_data, limits, factors):
             
         for r in routes:
             if factors.get(p, {}).get(r) != "NA":
-                x[(p, r)] = pulp.LpVariable(f"x_{p}_{r}", lowBound=0)
+                if hasattr(prob, "add_variable"):
+                    x[(p, r)] = prob.add_variable(f"x_{p}_{r}", lowBound=0)
+                else:
+                    x[(p, r)] = pulp.LpVariable(f"x_{p}_{r}", lowBound=0)
                 
     # Objective: minimize Σ x[p, r] × EF[p, r]
     prob += pulp.lpSum([x[(p, r)] * factors[p][r] for (p, r) in x])
@@ -49,7 +52,8 @@ def optimize_routes(composition_data, limits, factors):
         
     status = prob.solve(pulp.GLPK_CMD(msg=False))
 
-    if pulp.LpStatus[status] != "Optimal":
+    status_text = pulp.LpStatus[status] if hasattr(pulp, "LpStatus") else str(status)
+    if "Optimal" not in status_text:
         return {
             "error": (
                 f"Infeasible: The plastic batch weight ({total_plastic_weight} kg) exceeds available facility capacities. "

@@ -1,14 +1,77 @@
 {
-  "source": "SYNTHETIC - replace with the classifier's real test-set confusion matrix",
-  "note": "rows = true class, columns = predicted class, values = counts of test images",
-  "labels": ["PET", "HDPE", "PVC", "LDPE", "PP", "PS", "Other"],
+  "source": "Pure TensorFlow Polymer Classifier test set, 491 images, 17 Oct 2026",
+  "labels": [
+    "PET",
+    "HDPE",
+    "PVC",
+    "LDPE",
+    "PP",
+    "PS",
+    "Other"
+  ],
   "matrix": [
-    [85,  3,  1,  2,  4,  3,  2],
-    [ 3, 80,  2,  5,  8,  0,  2],
-    [ 4,  5, 70,  6,  5,  4,  6],
-    [ 2,  6,  1, 75, 12,  1,  3],
-    [ 3,  8,  1, 10, 74,  2,  2],
-    [ 5,  1,  2,  2,  3, 82,  5],
-    [ 6,  4,  4,  6,  6,  6, 68]
+    [
+      259,
+      4,
+      0,
+      1,
+      4,
+      0,
+      0
+    ],
+    [
+      4,
+      58,
+      0,
+      1,
+      0,
+      0,
+      0
+    ],
+    [
+      1,
+      0,
+      1,
+      3,
+      0,
+      1,
+      0
+    ],
+    [
+      4,
+      0,
+      33,
+      4,
+      0,
+      0,
+      0
+    ],
+    [
+      5,
+      0,
+      3,
+      0,
+      53,
+      13,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      39,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
   ]
 }

@@ -27,3 +27,6 @@ ehthumbs.db
 
 # Local Generated Data / Test Artifacts
 generated_compositions.json
+
+# Large model files (download separately; never commit)
+*.gguf
