@@ -21,17 +21,20 @@ browser ─► frontend (React, :5173 or :8080) ─► POST /api/analyse ─► 
 **1. Backend** (from `src/`):
 ```bash
 pip install flask flask-cors
-python -m comp_analyzer.gen          # sample classifier outputs, if not done yet
 python -m dashboard.app              # http://127.0.0.1:8501  (plain HTML page at /)
 ```
+Batches come from the real classifier: saved outputs in `classifying_plastics/data/` (e.g. `predictions.json`, its
+491 test photos), or photos uploaded on the page, which are classified with
+`classifying_plastics/models/best_polymer_model_tf.keras` (copy the trained model there; needs TensorFlow).
 Optional: `export POLYROUTE_GRANITE_GGUF=/path/to/granite.gguf` to use Granite for the explanation.
 
-**2. Frontend** (in another terminal):
+**2. Frontend** (in another terminal; needs [Bun](https://bun.com), e.g. `npm install -g bun`):
 ```bash
 cd src/dashboard/frontend
-npm install
-npm run dev                          # open the URL it prints
+bun install                          # if it fails downloading @lovable.dev/...: rm bun.lock && bun install
+bun run dev                          # open the URL it prints
 ```
+`npm install` fails on this project with an npm bug ("Cannot read properties of null (reading 'edgesOut')").
 The page shows **LIVE BACKEND** when it reaches the backend, and **DEMO WORKSPACE** with illustrative values when it can't.
 
 ## On IBM LinuxONE
@@ -54,7 +57,7 @@ ssh -L 8501:localhost:8501 linuxone
 
 | Field | Values |
 |---|---|
-| `sample_file` or `classifier_file` | a sample name from `/api/samples`, or an uploaded classifier JSON |
+| `photos` (one or more images), or `sample_file`, or `classifier_file` | photos to classify, a saved classifier output from `/api/samples`, or an uploaded classifier JSON |
 | `weight_mode` | `measured` (+ `total_kg`), `volume` (+ `volume_m3`), `count` (+ `item_count`), `photos` |
 | `recycle_cap_kg`, `compost_cap_kg`, `landfill_cap_kg` | facility limits in kg (defaults 40 / 10 / 15) |
 

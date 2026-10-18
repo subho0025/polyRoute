@@ -61,11 +61,11 @@ and quantified for every batch.
 
 | Module | Folder | What it does | Status |
 |---|---|---|---|
-| Classifier | `src/classifying_plastics/` | TensorFlow / Keras (MobileNetV3-Large) two-stage pipeline: plastic filter, then polymer class with probabilities | Trained; 84.3% accuracy on a 491-image test set |
+| Classifier | `src/classifying_plastics/` | TensorFlow / Keras (MobileNetV3-Large): polymer class with probabilities; predictions below 0.60 confidence go to manual check | Trained; 84.3% accuracy on a 491-image test set; connected to the dashboard |
 | Composition estimator | `src/comp_analyzer/` | Classifier records → kg per polymer with 95% intervals; batch-weight estimation | Complete |
 | Route optimiser | `src/optimiser/` | Linear programme (PuLP + GLPK) over EPA WARM v16 factors and facility limits | Complete |
 | Explainer | `src/explainer/` | IBM Granite 4.0 (GGUF) via llama-cpp-python, with a template fallback | Complete |
-| Dashboard | `src/dashboard/` | Flask JSON API running the whole chain, plus a React frontend (`frontend/`) and a plain HTML page | Working with sample batches; photo upload pending |
+| Dashboard | `src/dashboard/` | Flask JSON API running the whole chain (photos → classifier → … → explainer), plus a React frontend (`frontend/`) and a plain HTML page | Working end to end |
 | Checks | `src/checks/` | Step-by-step integration checks for the optimiser and explainer | In progress |
 
 ### Interfaces between modules
@@ -101,9 +101,10 @@ polyRoute/
 ├── requirements.txt
 └── src/
     ├── classifying_plastics/     # classifier (TensorFlow): classify.py, evaluate.py, polymer_classifier/
-    │   └── data/                 # predictions.json, confusion_matrix.json (real test set)
+    │   ├── data/                 # predictions.json, confusion_matrix.json (real test set)
+    │   └── models/               # trained model, best_polymer_model_tf.keras (not in git; copy it here)
     ├── comp_analyzer/            # composition estimator
-    │   └── data/                 # item masses, weight parameters, confusion matrix, synthetic test batches
+    │   └── data/                 # item masses, weight parameters, classifier confusion matrix; synthetic/ (tests only)
     ├── optimiser/                # route_opt.py, factors.py
     │   └── data/                 # emission_factors.csv (EPA WARM v16)
     ├── explainer/                # explainer.py (Granite prompt, model loading, fallback)
@@ -134,10 +135,10 @@ sudo dnf install glpk-utils       # Fedora
 cd src
 ```
 
-**Composition estimator** on a sample batch (50 kg, measured):
+**Composition estimator** on the classifier's real test-set output (50 kg, measured):
 ```bash
-python -m comp_analyzer.gen                         # create synthetic test batches
-python -m comp_analyzer.demo medium_100.json 50     # or: volume=1.2 / count=2000 / no weight
+python -m comp_analyzer.demo classifying_plastics/data/predictions.json 50    # or: volume=1.2 / count=2000 / no weight
+python -m comp_analyzer.tests                                               # unit tests (use synthetic batches)
 ```
 
 **Optimiser** checks (hand-worked cases, edge cases, 500 random batches against an independent solver):
@@ -159,12 +160,13 @@ pip install -r classifying_plastics/requirements.txt
 cd classifying_plastics && python3 classify.py path/to/images/ -o data/predictions.json
 ```
 
-**Dashboard**: backend first, then the frontend in a second terminal:
+**Dashboard**: backend first, then the frontend in a second terminal. Photo upload needs the trained model at
+`classifying_plastics/models/best_polymer_model_tf.keras` and the classifier requirements (TensorFlow).
 ```bash
 pip install flask flask-cors
 python -m dashboard.app                    # backend on http://127.0.0.1:8501 (plain HTML page at /)
 
-cd dashboard/frontend && npm install && npm run dev    # React frontend; open the URL it prints
+cd dashboard/frontend && bun install && bun run dev    # React frontend (needs Bun: npm install -g bun)
 ```
 The frontend shows **LIVE BACKEND** when connected, and **DEMO WORKSPACE** with illustrative values when the
 backend isn't running. See [`src/dashboard/README.md`](src/dashboard/README.md) for the API.
@@ -225,15 +227,15 @@ widens its intervals accordingly.
 
 ## Example result
 
-Synthetic batch `medium_100.json` (100 photos) with the placeholder item masses, weighed at 50 kg, facility limits 40 kg recycling / 10 kg
-composting / 15 kg landfill:
+The classifier's real output for its 491 held-out test photos (`classifying_plastics/data/predictions.json`),
+treated as one batch weighed at 50 kg, with facility limits 40 kg recycling / 10 kg composting / 15 kg landfill:
 
 | | |
 |---|---|
-| Plastic found | 25.86 kg across 7 types (non-plastic and unclear items excluded) |
-| Plan | PET, HDPE, PP and Other → recycling; PVC, LDPE and PS → landfill |
-| Carbon | everything to landfill: +0.57 kg CO2e → PolyRoute plan: −21.83 kg CO2e |
-| **Saving** | **22.4 kg CO2e** |
+| Plastic found | 50 kg: PET 28.89, HDPE 10.55, PP 4.41, PVC 4.25, PS 1.62, LDPE 0.29 kg |
+| Plan | PET and PP → recycling; HDPE 6.70 kg recycled (recycling is then full) and 3.85 kg to landfill; PVC, LDPE and PS → landfill |
+| Carbon | everything to landfill: +1.10 kg CO2e → PolyRoute plan: −42.35 kg CO2e |
+| **Saving** | **43.45 kg CO2e** |
 
 With a larger batch the same limits fill up, and the overflow must go to energy recovery. The plan then becomes a
 net carbon cost, which PolyRoute reports as such rather than as a saving.
@@ -246,8 +248,10 @@ net carbon cost, which PolyRoute reports as such rather than as a saving.
   countries will differ; the ranking between routes is the more robust result.
 - **CO2e only.** Landfill scores well on carbon but carries other harms (land use, leachate, microplastics) that
   CO2e does not capture; the landfill limit exists to reflect that.
-- **Placeholder parameters.** Typical item masses and bulk densities are placeholders, and the test batches are
-  synthetic. Results are illustrative until these are replaced with measured data.
+- **Placeholder parameters.** Typical item masses and bulk densities are placeholders (marked `PLACEHOLDER` and
+  listed on the dashboard as "demo values in use"). Results are illustrative until they are replaced with measured data.
+- **No separate plastic detector.** Every photo is assumed to show a plastic item; low-confidence predictions are set
+  aside as "uncertain" instead of being counted.
 - **Language model.** Granite's explanations are constrained by the prompt to the numbers and reasons supplied,
   but a language model can still phrase things imperfectly; the numbers shown in the dashboard come from the
   optimiser, not from the model.

@@ -9,6 +9,9 @@ app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB upload limit
 
+
+# ---------- JSON API (used by the React frontend in dashboard/frontend) ----------
+
 @app.get("/api/samples")
 def get_samples():
     """Returns available sample profiles and default facility limits."""
@@ -29,9 +32,30 @@ def api_analyse():
     except (ValueError, NotImplementedError) as e:
         return jsonify({"error": str(e)}), 400
 
+
+# ---------- Plain HTML page (no Node needed; e.g. directly on LinuxONE) ----------
+
+def page(view=None, error=None, form=None):
+    return render_template("index.html", view=view, error=error, form=form or {},
+                           samples=integrations.list_sample_files(),
+                           defaults=pipeline.DEFAULT_LIMITS, machine=pipeline.machine())
+
+@app.get("/")
+def index():
+    return page()
+
+@app.post("/analyse")
+def analyse():
+    try:
+        return page(view=pipeline.run(request.form, request.files), form=request.form)
+    except (ValueError, NotImplementedError) as e:
+        return page(error=str(e), form=request.form), 400
+
+
 if __name__ == "__main__":
     app.run(
         host=os.environ.get("POLYROUTE_HOST", "127.0.0.1"),
         port=int(os.environ.get("POLYROUTE_PORT", "8501")),
-        debug=True,
+        # debug=True starts a second (reloader) process, which would load the Granite model twice
+        debug=os.environ.get("POLYROUTE_DEBUG") == "1",
     )

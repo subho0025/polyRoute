@@ -35,14 +35,15 @@
       <label for="sample_file">Classifier output</label>
       <select id="sample_file" name="sample_file">
         {% for s in samples %}
-          <option value="{{ s }}" {% if form.get('sample_file', 'medium_100.json') == s %}selected{% endif %}>{{ s }}</option>
+          <option value="{{ s }}" {% if form.get('sample_file', 'predictions.json') == s %}selected{% endif %}>{{ s }}</option>
         {% else %}
-          <option value="">No samples – run python -m comp_analyzer.gen</option>
+          <option value="">No classifier output in classifying_plastics/data/</option>
         {% endfor %}
       </select>
       <label for="classifier_file" class="secondary">Or upload a classifier JSON file</label>
       <input id="classifier_file" name="classifier_file" type="file" accept=".json,application/json">
-      <p class="hint">Photo upload arrives when the classifier is connected.</p>
+      <label for="photos" class="secondary">Or upload photos of the batch</label>
+      <input id="photos" name="photos" type="file" accept="image/*" multiple>
     </fieldset>
 
     <fieldset class="weight">

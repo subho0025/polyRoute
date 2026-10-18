@@ -69,6 +69,8 @@ interface AnalysisResult {
   route_labels: Record<string, string>;
   routes_used: string[];
   explanation?: string;
+  explained_by?: string;
+  explain_seconds?: number;
   notes?: string[];
   placeholders?: string[];
 }
@@ -164,12 +166,10 @@ const FALLBACK_DATA: AnalysisResult = {
 };
 
 function PolyRouteApp() {
-  const [samples, setSamples] = useState<string[]>([
-    "medium_100.json",
-    "large_500.json",
-  ]);
-  const [sampleFile, setSampleFile] = useState("medium_100.json");
+  const [samples, setSamples] = useState<string[]>(["predictions.json"]);
+  const [sampleFile, setSampleFile] = useState("predictions.json");
   const [classifierFile, setClassifierFile] = useState<File | null>(null);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [weightMode, setWeightMode] = useState<
     "measured" | "volume" | "count" | "photos"
   >("measured");
@@ -178,9 +178,10 @@ function PolyRouteApp() {
   const [volumeM3Input, setVolumeM3Input] = useState("1.5");
   const [itemCountInput, setItemCountInput] = useState("100");
 
-  const [recycleCap, setRecycleCap] = useState("30");
-  const [compostCap, setCompostCap] = useState("12");
-  const [landfillCap, setLandfillCap] = useState("20");
+  // same defaults as the backend (pipeline.DEFAULT_LIMITS), so the first result matches the inputs shown
+  const [recycleCap, setRecycleCap] = useState("40");
+  const [compostCap, setCompostCap] = useState("10");
+  const [landfillCap, setLandfillCap] = useState("15");
 
   const [data, setData] = useState<AnalysisResult>(FALLBACK_DATA);
   const [isLive, setIsLive] = useState(false);
@@ -216,7 +217,7 @@ function PolyRouteApp() {
       .then((info) => {
         if (info.samples && info.samples.length > 0) {
           setSamples(info.samples);
-          setSampleFile(info.samples[0]);
+          setSampleFile(info.samples.includes("predictions.json") ? "predictions.json" : info.samples[0]);
         }
         if (info.defaults) {
           setRecycleCap(String(info.defaults.recycle_cap_kg ?? 30));
@@ -231,13 +232,14 @@ function PolyRouteApp() {
 
   const runAnalysis = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (weightMode === "photos") return;
 
     setLoading(true);
     setError(null);
 
     const formData = new FormData();
-    if (classifierFile) {
+    if (photoFiles.length) {
+      photoFiles.forEach((f) => formData.append("photos", f));
+    } else if (classifierFile) {
       formData.append("classifier_file", classifierFile);
     } else {
       formData.append("sample_file", sampleFile);
@@ -730,11 +732,9 @@ function PolyRouteApp() {
                     onChange={(e) => {
                       setSampleFile(e.target.value);
                       setClassifierFile(null);
+                      setPhotoFiles([]);
                     }}
                   >
-                    <option value="demo-mix">
-                      Illustrative plastic mix - 100 items
-                    </option>
                     {samples.map((s) => (
                       <option key={s} value={s}>
                         {s}
@@ -760,6 +760,24 @@ function PolyRouteApp() {
                   onChange={(e) =>
                     setClassifierFile(e.target.files?.[0] || null)
                   }
+                />
+
+                <label className="upload-control" htmlFor="photo-files">
+                  <Upload aria-hidden="true" />
+                  <span className="upload-name">
+                    {photoFiles.length
+                      ? `${photoFiles.length} photo${photoFiles.length === 1 ? "" : "s"} selected`
+                      : "Or upload photos"}
+                  </span>
+                  <span className="upload-action">Browse</span>
+                </label>
+                <input
+                  id="photo-files"
+                  className="visually-hidden"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => setPhotoFiles(Array.from(e.target.files || []))}
                 />
               </fieldset>
 
@@ -816,7 +834,7 @@ function PolyRouteApp() {
                         id="batch-kg-input"
                         type="number"
                         min="0.1"
-                        step="0.5"
+                        step="any"
                         value={totalKgInput}
                         onChange={(e) => setTotalKgInput(e.target.value)}
                       />
@@ -836,7 +854,7 @@ function PolyRouteApp() {
                         id="batch-vol-input"
                         type="number"
                         min="0.1"
-                        step="0.1"
+                        step="any"
                         value={volumeM3Input}
                         onChange={(e) => setVolumeM3Input(e.target.value)}
                       />
@@ -871,7 +889,7 @@ function PolyRouteApp() {
                     role="status"
                     style={{ fontSize: "0.7rem", margin: 0 }}
                   >
-                    Available when classifier is connected.
+                    The photos show the whole batch: its weight is estimated from the items in them.
                   </p>
                 )}
               </fieldset>
@@ -892,7 +910,7 @@ function PolyRouteApp() {
                       id="recycling-capacity"
                       type="number"
                       min="0"
-                      step="1"
+                      step="any"
                       value={recycleCap}
                       onChange={(e) => setRecycleCap(e.target.value)}
                     />
@@ -910,7 +928,7 @@ function PolyRouteApp() {
                       id="compost-capacity"
                       type="number"
                       min="0"
-                      step="1"
+                      step="any"
                       value={compostCap}
                       onChange={(e) => setCompostCap(e.target.value)}
                     />
@@ -928,7 +946,7 @@ function PolyRouteApp() {
                       id="landfill-capacity"
                       type="number"
                       min="0"
-                      step="1"
+                      step="any"
                       value={landfillCap}
                       onChange={(e) => setLandfillCap(e.target.value)}
                     />
@@ -940,7 +958,7 @@ function PolyRouteApp() {
               <button
                 className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 rounded-md px-8 find-routes-button"
                 type="submit"
-                disabled={loading || weightMode === "photos"}
+                disabled={loading}
               >
                 {loading ? (
                   <>
@@ -1301,10 +1319,17 @@ function PolyRouteApp() {
                     ? data.explanation
                     : "Example estimate against sending the identified plastic to landfill."}
                 </p>
+                {isLive && (
+                  <p className="submit-hint">
+                    {data.explained_by === "granite"
+                      ? `Written by IBM Granite in ${data.explain_seconds?.toFixed(1)} s`
+                      : "Written from a template (Granite not loaded)"}
+                  </p>
+                )}
               </div>
               <div className="carbon-stat">
-                <strong>{data.saved.toFixed(1)}</strong>
-                <span>kg CO₂e avoided*</span>
+                <strong>{Math.abs(data.saved).toFixed(1)}</strong>
+                <span>{data.saved >= 0 ? "kg CO₂e avoided*" : "kg CO₂e more than landfill*"}</span>
               </div>
               <div className="carbon-decoration" aria-hidden="true">
                 <Factory aria-hidden="true" />

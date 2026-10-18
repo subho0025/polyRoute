@@ -44,11 +44,14 @@ def _number(form, key, default=None):
 
 def read_inputs(form, files):
     """Turn the submitted form into (items, total_kg, batch, limits, source_label)."""
+    photos = [f for f in files.getlist("photos") if f and f.filename] if hasattr(files, "getlist") else []
     upload = files.get("classifier_file")
-    if upload and upload.filename:
+    if photos:
+        items, source = integrations.classify_photos(photos), f"{len(photos)} uploaded photos"
+    elif upload and upload.filename:
         items, source = integrations.load_items_from_upload(upload), upload.filename
     else:
-        sample = form.get("sample_file") or "medium_100.json"
+        sample = form.get("sample_file") or "predictions.json"
         items, source = integrations.load_items_from_sample(sample), sample
 
     mode = form.get("weight_mode", "measured")

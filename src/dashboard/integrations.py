@@ -4,14 +4,15 @@ Each function here is the ONE place where the dashboard talks to another module.
 Until a teammate's module is ready, a clearly marked stand-in is used instead,
 so the dashboard always runs. Swap the stand-in for the real call when it's ready.
 
-    classifier  -> load_items_from_*      (stand-in: synthetic/uploaded JSON)
+    classifier  -> classify_photos()      (real: trained Keras model in classifying_plastics/models)
+                   load_items_from_*      (saved real classifier output, or an uploaded JSON)
     optimiser   -> run_optimiser()        (real: optimiser.optimize_routes + EPA WARM factors)
     explainer   -> explain_plan()         (real: IBM Granite via explainer, template if no model)
 """
 
 import json
+import sys
 
-from comp_analyzer.config import SYNTHETIC_DIR
 import os
 from pathlib import Path
 
@@ -25,17 +26,25 @@ ROUTES = ["recycle", "compost", "combust", "landfill"]
 
 # ---------- classifier ----------
 
+# Real classifier output (no synthetic data): classifying_plastics/data/*.json, e.g. predictions.json
+# = the trained classifier's predictions on its 491 held-out test photos.
+CLASSIFIER_DIR = Path(__file__).resolve().parent.parent / "classifying_plastics"
+CLASSIFIER_DATA = CLASSIFIER_DIR / "data"
+CLASSIFIER_MODELS = CLASSIFIER_DIR / "models"
+UNCERTAIN_BELOW = 0.60  # classifier's own threshold (ClassifierConfigTF.plastic_confidence_threshold)
+
+
 def list_sample_files():
-    """Synthetic classifier outputs available as demo inputs."""
-    if not SYNTHETIC_DIR.exists():
+    """Saved outputs of the real classifier."""
+    if not CLASSIFIER_DATA.exists():
         return []
-    return sorted(p.name for p in SYNTHETIC_DIR.glob("*.json"))
+    return sorted(p.name for p in CLASSIFIER_DATA.glob("*.json") if p.name != "confusion_matrix.json")
 
 
 def load_items_from_sample(name):
-    path = SYNTHETIC_DIR / name
-    if not path.exists() or path.parent != SYNTHETIC_DIR:
-        raise ValueError(f"Sample file {name!r} not found. Run: python -m comp_analyzer.gen")
+    path = CLASSIFIER_DATA / name
+    if path.name != name or name == "confusion_matrix.json" or not path.exists():
+        raise ValueError(f"Classifier output {name!r} not found in classifying_plastics/data/.")
     return json.loads(path.read_text())
 
 
@@ -50,10 +59,43 @@ def load_items_from_upload(file_storage):
     return items
 
 
+_CLASSIFIER = {}
+
+
+def _classifier():
+    """Load the trained Keras model once (TensorFlow is imported only when photos are uploaded)."""
+    if "model" not in _CLASSIFIER:
+        keras_file = CLASSIFIER_MODELS / "best_polymer_model_tf.keras"
+        weights_file = CLASSIFIER_MODELS / "best_polymer_model_tf.weights.h5"
+        if not keras_file.exists() and not weights_file.exists():
+            raise ValueError("Classifier model not found: put best_polymer_model_tf.keras (or .weights.h5) "
+                             "in src/classifying_plastics/models/.")
+        if str(CLASSIFIER_DIR) not in sys.path:
+            sys.path.insert(0, str(CLASSIFIER_DIR))
+        from classify import format_record
+        from polymer_classifier.infer import PolymerPredictorTF
+        model = PolymerPredictorTF.from_checkpoint(str(keras_file) if keras_file.exists() else None)
+        _CLASSIFIER["model"], _CLASSIFIER["format"] = model, format_record
+    return _CLASSIFIER["model"], _CLASSIFIER["format"]
+
+
 def classify_photos(files):
-    """TODO (classifier teammate): photos -> list of classifier records.
-    Replace the body with the real classifier call."""
-    raise NotImplementedError("Photo classification isn't connected yet.")
+    """Photos -> classifier records, using the team's trained classifier (classifying_plastics)."""
+    from PIL import Image
+    predictor, format_record = _classifier()
+    records = []
+    for f in files:
+        try:
+            image = Image.open(f.stream).convert("RGB")
+        except Exception:
+            raise ValueError(f"{f.filename} isn't an image the classifier can read.")
+        record = format_record(f.filename, predictor.predict(image))
+        if record["confidence"] < UNCERTAIN_BELOW:  # low confidence -> manual check, left out of the estimate
+            record["material"], record["polymer"] = "uncertain", None
+        records.append(record)
+    if not records:
+        raise ValueError("No photos were received.")
+    return records
 
 
 # ---------- optimiser ----------
