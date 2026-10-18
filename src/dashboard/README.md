@@ -47,7 +47,7 @@ POLYROUTE_HOST=0.0.0.0 POLYROUTE_THREADS=3 python -m dashboard.app
 
 ssh -L 8501:localhost:8501 linuxone
 ```
-`/api/samples` reports `"machine": "s390x"` and the plain HTML page's footer says "Running on IBM LinuxONE (s390x)".
+`/api/samples` reports `"machine": "s390x"` and the plain HTML page's footer shows "IBM LinuxONE (s390x)".
 
 ## API
 
@@ -72,6 +72,6 @@ Errors return `{"error": "..."}` with status 400.
 |---|---|
 | `app.py` | Flask routes: JSON API (`/api/samples`, `/api/analyse`) and the plain HTML page (`/`, `/analyse`) |
 | `pipeline.py` | Reads the inputs, runs comp_analyzer → optimiser → explainer, builds the view model |
-| `integrations.py` | The only place that calls the other modules (optimiser, explainer; classifier still to connect) |
+| `integrations.py` | The only place that calls the other modules (classifier, optimiser, explainer); runs one Granite request at a time and reuses answers for an identical plan |
 | `templates/`, `static/` | Plain HTML page |
 | `frontend/` | React frontend |
