@@ -20,15 +20,15 @@ browser ─► frontend (React, :5173 or :8080) ─► POST /api/analyse ─► 
 
 **1. Backend** (from `src/`):
 ```bash
-pip install flask flask-cors
-python -m dashboard.app              # http://127.0.0.1:8501  (plain HTML page at /)
+pip install -r ../requirements.txt   # once
+python -m dashboard.app             # http://127.0.0.1:8501  (plain HTML page at /)
 ```
 Batches come from the real classifier: saved outputs in `classifying_plastics/data/` (e.g. `predictions.json`, its
 491 test photos), or photos uploaded on the page, which are classified with
-`classifying_plastics/models/best_polymer_model_tf.keras` (copy the trained model there; needs TensorFlow).
+`classifying_plastics/models/best_polymer_model_tf.keras` (in the repository).
 Optional: `export POLYROUTE_GRANITE_GGUF=/path/to/granite.gguf` to use Granite for the explanation.
 
-**2. Frontend** (in another terminal; needs [Bun](https://bun.com), e.g. `npm install -g bun`):
+**2. Frontend** (in another terminal; needs [Bun](https://bun.com), e.g. `curl -fsSL https://bun.sh/install | bash`):
 ```bash
 cd src/dashboard/frontend
 bun install                          # if it fails downloading @lovable.dev/...: rm bun.lock && bun install

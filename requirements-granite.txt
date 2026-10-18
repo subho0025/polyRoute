@@ -1,0 +1,6 @@
+# IBM Granite explanations (optional; without them the dashboard uses a template explanation)
+#   pip install -r requirements-granite.txt
+# llama-cpp-python compiles llama.cpp during install: it needs cmake and a C/C++ compiler.
+llama-cpp-python>=0.3
+huggingface_hub>=0.25  # the `hf download` command for the model file
+gguf>=0.10             # LinuxONE only: converting the model to big-endian

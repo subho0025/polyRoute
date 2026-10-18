@@ -1,8 +1,23 @@
-numpy==2.0.2
-scipy==1.13.1
-pulp==4.0.1
-flask
-flask-cors
-# pip install llama-cpp-python
-# pip install -r src/classifying_plastics/requirements.txt
-# cd src/dashboard/frontend && npm install
+# PolyRoute: everything needed to run the pipeline and the dashboard backend
+#   pip install -r requirements.txt
+# Lower bounds only, so the packages already in the LinuxONE container image are used as they are
+# (PyPI has no s390x builds of numpy, scipy or Pillow, so pinning other versions makes pip compile them).
+
+# Composition estimator and route optimiser
+numpy>=1.26
+scipy>=1.11
+pulp>=2.8              # 2.x, 3.x and 4.x all work; also needs the GLPK solver (glpsol) on PATH
+
+# Dashboard backend
+flask>=3.0
+flask-cors>=4.0
+
+# Classifier (photo upload). On LinuxONE, TensorFlow and Keras come with the container image.
+Pillow>=10.0
+tensorflow>=2.16; platform_machine != "s390x"
+keras>=3.0; platform_machine != "s390x"
+
+# Optional extras:
+#   pip install -r requirements-granite.txt                         # IBM Granite explanations
+#   pip install -r src/classifying_plastics/requirements.txt        # training and evaluating the classifier
+# Frontend (Node packages, not pip): cd src/dashboard/frontend && bun install

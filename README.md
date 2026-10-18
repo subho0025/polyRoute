@@ -20,6 +20,8 @@ Built for the **IBM Z Datathon 2026**, Wildcard theme *"Beyond the Obvious"*, an
 - [Repository layout](#repository-layout)
 - [Quick start](#quick-start)
 - [Running on IBM LinuxONE](#running-on-ibm-linuxone)
+- [Testing from the website](#testing-from-the-website)
+- [Screenshots](#screenshots)
 - [Data, models and sources](#data-models-and-sources)
 - [Example result](#example-result)
 - [Limitations](#limitations)
@@ -40,8 +42,8 @@ flowchart LR
     W[(EPA WARM v16<br/>emission factors)] --> D
 ```
 
-1. **Classify.** Each photo is classified as plastic or not, and plastic items are assigned one of seven classes:
-   PET, HDPE, PVC, LDPE, PP, PS, Other.
+1. **Classify.** Each photo is assigned a polymer class (PET, HDPE, PVC, LDPE, PP, PS) with probabilities.
+   Predictions below 0.60 confidence are set aside as "uncertain" instead of being counted.
 2. **Estimate composition.** Item predictions become kilograms per polymer. The estimator corrects for the
    classifier's known mistakes using its confusion matrix, weights items by typical mass, estimates the batch weight
    when it isn't measured, and gives a 95% interval for every number.
@@ -49,6 +51,12 @@ flowchart LR
    emissions (EPA WARM v16 factors), without exceeding recycling, composting or landfill capacity.
 4. **Explain.** IBM Granite, running locally on CPU, turns the plan into a short explanation. If the model is
    unavailable, a template explanation is used instead.
+5. **Show.** The dashboard takes photos (or a saved classifier output), runs steps 1 to 4 on the server and shows
+   kilograms per polymer, the route for each kilogram, the carbon result and the explanation.
+
+Every number on the dashboard comes from real classifier output: either photos uploaded on the page or a saved
+classifier run in `classifying_plastics/data/` (such as its 491 test photos). The synthetic batches in
+`comp_analyzer/data/synthetic/` are used only by the unit tests.
 
 **Why it goes beyond the obvious:** the lowest-carbon choice is often not the intuitive one. Under WARM, burning
 plastic for energy emits more CO2e than landfilling it, LDPE film, PS and PVC have no recycling factor at all, and
@@ -66,7 +74,7 @@ and quantified for every batch.
 | Route optimiser | `src/optimiser/` | Linear programme (PuLP + GLPK) over EPA WARM v16 factors and facility limits | Complete |
 | Explainer | `src/explainer/` | IBM Granite 4.0 (GGUF) via llama-cpp-python, with a template fallback | Complete |
 | Dashboard | `src/dashboard/` | Flask JSON API running the whole chain (photos → classifier → … → explainer), plus a React frontend (`frontend/`) and a plain HTML page | Working end to end |
-| Checks | `src/checks/` | Step-by-step integration checks for the optimiser and explainer | In progress |
+| Checks | `src/checks/` | Integration checks: optimiser (hand-worked and random cases), explainer (Granite answers checked against the plan), whole pipeline on a folder of photos | Complete |
 
 ### Interfaces between modules
 
@@ -98,11 +106,13 @@ and quantified for every batch.
 ```text
 polyRoute/
 ├── README.md
-├── requirements.txt
+├── requirements.txt              # pipeline, dashboard, classifier inference
+├── requirements-granite.txt      # optional: IBM Granite explanations
+├── docs/screenshots/             # images used in this README
 └── src/
     ├── classifying_plastics/     # classifier (TensorFlow): classify.py, evaluate.py, polymer_classifier/
     │   ├── data/                 # predictions.json, confusion_matrix.json (real test set)
-    │   └── models/               # trained model, best_polymer_model_tf.keras (not in git; copy it here)
+    │   └── models/               # trained model, best_polymer_model_tf.keras
     ├── comp_analyzer/            # composition estimator
     │   └── data/                 # item masses, weight parameters, classifier confusion matrix; synthetic/ (tests only)
     ├── optimiser/                # route_opt.py, factors.py
@@ -110,7 +120,7 @@ polyRoute/
     ├── explainer/                # explainer.py (Granite prompt, model loading, fallback)
     ├── dashboard/                # Flask backend (app.py, pipeline.py, integrations.py), plain HTML page
     │   └── frontend/             # React frontend (TanStack Start, Vite, Tailwind CSS)
-    └── checks/                   # integration checks (in progress)
+    └── checks/                   # optimiser_check, explainer_check, pipeline_check
 ```
 
 All commands below are run from `src/`.
@@ -119,14 +129,15 @@ All commands below are run from `src/`.
 
 ## Quick start
 
-**Requirements:** Python 3 (tested with 3.12 on LinuxONE), the GLPK solver, and about 3 GB of free RAM for the explainer.
+**Requirements:** Python 3.10 to 3.13 (tested with 3.12 and 3.13), the GLPK solver, and about 3 GB of free RAM for
+the classifier and the explainer together.
 
 ```bash
 git clone https://github.com/subho0025/polyRoute.git
 cd polyRoute
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-pip install llama-cpp-python      # explainer only; builds from source (needs cmake and a C++ compiler)
+pip install -r requirements.txt            # pipeline, dashboard backend, classifier (TensorFlow)
+pip install -r requirements-granite.txt    # optional: IBM Granite; compiles llama.cpp (needs cmake and a C++ compiler)
 
 # GLPK solver used by the optimiser
 sudo dnf install glpk-utils       # Fedora
@@ -146,27 +157,31 @@ python -m comp_analyzer.tests                                               # un
 python -m checks.optimiser_check
 ```
 
-**Explainer** with IBM Granite (download about 2 GB once):
+**Explainer** with IBM Granite 4.0 H-1B (download about 0.9 GB once; on LinuxONE see the big-endian step
+[below](#running-on-ibm-linuxone)):
 ```bash
-pip install -U huggingface_hub
-hf download ibm-granite/granite-4.0-h-micro-GGUF granite-4.0-h-micro-Q4_K_M.gguf --local-dir explainer
-export POLYROUTE_GRANITE_GGUF=$PWD/explainer/granite-4.0-h-micro-Q4_K_M.gguf
+hf download ibm-granite/granite-4.0-h-1b-GGUF granite-4.0-h-1b-Q4_K_M.gguf --local-dir explainer
+export POLYROUTE_GRANITE_GGUF=$PWD/explainer/granite-4.0-h-1b-Q4_K_M.gguf
 python -m checks.explainer_check --quick
 ```
 
-**Classifier** on a folder of images (needs the trained model in `classifying_plastics/models/`):
+**Whole pipeline** on a folder of photos (classifier → composition → optimiser → explainer → dashboard API):
 ```bash
-pip install -r classifying_plastics/requirements.txt
+python -m checks.pipeline_check path/to/photos --kg 50       # batch weighed at 50 kg
+python -m checks.pipeline_check path/to/photos --photos-only # the photos show the whole batch
+```
+
+**Classifier** on a folder of images (the trained model is in `classifying_plastics/models/`):
+```bash
 cd classifying_plastics && python3 classify.py path/to/images/ -o data/predictions.json
 ```
 
-**Dashboard**: backend first, then the frontend in a second terminal. Photo upload needs the trained model at
-`classifying_plastics/models/best_polymer_model_tf.keras` and the classifier requirements (TensorFlow).
+**Dashboard**: backend first, then the frontend in a second terminal. Photo upload uses the trained model at
+`classifying_plastics/models/best_polymer_model_tf.keras`.
 ```bash
-pip install flask flask-cors
 python -m dashboard.app                    # backend on http://127.0.0.1:8501 (plain HTML page at /)
 
-cd dashboard/frontend && bun install && bun run dev    # React frontend (needs Bun: npm install -g bun)
+cd dashboard/frontend && bun install && bun run dev    # React frontend (needs Bun: curl -fsSL https://bun.sh/install | bash)
 ```
 The frontend shows **LIVE BACKEND** when connected, and **DEMO WORKSPACE** with illustrative values when the
 backend isn't running. See [`src/dashboard/README.md`](src/dashboard/README.md) for the API.
@@ -176,25 +191,145 @@ backend isn't running. See [`src/dashboard/README.md`](src/dashboard/README.md) 
 ## Running on IBM LinuxONE
 
 PolyRoute runs on an IBM LinuxONE Community Cloud virtual server (s390x, Ubuntu 24.04, 3 vCPU, 8 GB RAM), inside
-the event's JupyterLab container image.
+the event's `app` container (Red Hat UBI 10, Python 3.12 in `/opt/venv`, TensorFlow 2.18, Keras 3.14,
+llama-cpp-python 0.3, PuLP 4.0.1). Every step of the pipeline, including the classifier and IBM Granite, runs on
+LinuxONE; only the browser runs on the laptop.
 
 | Concern | How PolyRoute handles it on s390x |
 |---|---|
 | Classifier | TensorFlow 2.18 is available on s390x; PyTorch's torchvision is not, so the classifier is pure TensorFlow / Keras |
-| Dashboard backend | Streamlit's dependency pyarrow has no s390x wheel, so the backend is Flask (pure Python) and runs on LinuxONE |
-| Dashboard frontend | Runs on the laptop and reaches the LinuxONE backend through the SSH tunnel on port 8501; all computation happens on LinuxONE |
-| Optimiser | PuLP 4.0.1 (as shipped in the container) with GLPK from the Ubuntu archive (`apt-get install glpk-utils`); `route_opt.py` also supports PuLP 2/3 |
-| Explainer | llama.cpp supports s390x, but needs **big-endian** GGUF model files; standard downloads are little-endian (see [llama.cpp s390x guide](https://github.com/ggml-org/llama.cpp/blob/master/docs/build-s390x.md)) |
-| CPU threads | set `POLYROUTE_THREADS=3` so the explainer uses all three vCPUs |
+| Dashboard backend | Streamlit's dependency pyarrow has no s390x wheel, so the backend is Flask (pure Python) |
+| Dashboard frontend | Runs on the laptop and reaches the LinuxONE backend through an SSH tunnel on port 8501 |
+| Optimiser | PuLP 4.0.1 (as shipped in the container). The container has no GLPK package, so GLPK 5.0 is built from source; `route_opt.py` supports PuLP 2, 3 and 4 |
+| Explainer | llama.cpp supports s390x, but needs **big-endian** GGUF files; standard downloads are little-endian, so the model is converted once (see [llama.cpp s390x guide](https://github.com/ggml-org/llama.cpp/blob/master/docs/build-s390x.md)) |
+| Memory | The VM has 8 GB shared with the JupyterLab container, so the explainer uses Granite 4.0 **H-1B** (0.9 GB), loads it once, and runs one Granite request at a time |
+| CPU threads | `POLYROUTE_THREADS=3` lets Granite use all three vCPUs |
 
-Access is over SSH with port forwarding (JupyterLab on 38888, dashboard on 8501):
+### One-time setup
+
+**1. Give the container the project folder and port 8501.** The repository lives on the VM in
+`/home/linux1/shared/polyRoute`; the container sees it as `/shared/polyRoute`.
 ```bash
-ssh -L 38888:localhost:38888 -L 8501:localhost:8501 linux1@<server-ip>
+# on the VM
+mkdir -p ~/shared && cd ~/shared && git clone https://github.com/subho0025/polyRoute.git
+IMG=$(docker inspect app --format '{{.Config.Image}}')    # the event's image, before removing the old container
+docker rm -f app
+docker run -d --name app -p 127.0.0.1:8501:8501 -v /home/linux1/shared:/shared "$IMG"
 ```
 
-Start the backend on the VM with `POLYROUTE_HOST=0.0.0.0 POLYROUTE_THREADS=3 python -m dashboard.app` (from `src/`); `/api/samples` then reports `"machine": "s390x"`.
+**2. Build GLPK from source** (the container is RHEL-based, has no `apt-get`, and `dnf install glpk-utils` fails on
+missing dependencies):
+```bash
+docker exec -it app bash
+cd /shared && curl -LO https://ftp.gnu.org/gnu/glpk/glpk-5.0.tar.gz && tar xzf glpk-5.0.tar.gz
+cd glpk-5.0 && ./configure --prefix=/shared/glpk && make -j3 && make install
+/shared/glpk/bin/glpsol --version                      # GLPSOL--GLPK LP/MIP Solver 5.0
+```
 
-<!-- Add LinuxONE screenshots here (docs/screenshots/): instance page, `uname -m` showing s390x, /api/samples showing "machine": "s390x", the dashboard with LIVE BACKEND. -->
+**3. Install the Python packages** (still inside the container):
+```bash
+export PATH=/shared/glpk/bin:/opt/venv/bin:/usr/local/bin:/usr/bin:/bin
+cd /shared/polyRoute
+pip install -r requirements.txt -r requirements-granite.txt
+```
+The container already has numpy, SciPy, Pillow, TensorFlow, Keras and llama-cpp-python, and `requirements.txt` only
+sets lower bounds, so pip keeps those and installs just Flask, Flask-CORS, PuLP and the Granite download tools.
+This matters on s390x: PyPI has no s390x builds of numpy, SciPy, Pillow, scikit-learn or matplotlib, so any version
+change would make pip compile them from source. Photo upload loads only the classifier's inference code, so
+scikit-learn, matplotlib and seaborn (used for training and evaluation) aren't needed.
+
+**4. Download Granite and convert it to big-endian** (type `YES` when asked):
+```bash
+cd /shared/polyRoute/src/explainer
+hf download ibm-granite/granite-4.0-h-1b-GGUF granite-4.0-h-1b-Q4_K_M.gguf --local-dir .
+python -m gguf.scripts.gguf_convert_endian granite-4.0-h-1b-Q4_K_M.gguf native   # converts the file in place
+mv granite-4.0-h-1b-Q4_K_M.gguf granite-4.0-h-1b-Q4_K_M-be.gguf
+```
+
+The trained classifier, `src/classifying_plastics/models/best_polymer_model_tf.keras` (38 MB), comes with the
+repository.
+
+### Run the checks and the backend
+
+```bash
+# on the VM
+docker exec -it -w /shared/polyRoute/src \
+  -e PATH=/shared/glpk/bin:/opt/venv/bin:/usr/local/bin:/usr/bin:/bin \
+  -e POLYROUTE_THREADS=3 \
+  -e POLYROUTE_GRANITE_GGUF=/shared/polyRoute/src/explainer/granite-4.0-h-1b-Q4_K_M-be.gguf \
+  app bash
+
+python -m checks.optimiser_check
+python -m checks.explainer_check --quick
+python -m checks.pipeline_check path/to/photos --kg 50
+
+POLYROUTE_HOST=0.0.0.0 python -m dashboard.app    # backend on port 8501
+```
+
+| Setting | Meaning |
+|---|---|
+| `POLYROUTE_GRANITE_GGUF` | Path to the Granite GGUF file (big-endian on LinuxONE) |
+| `POLYROUTE_THREADS` | CPU threads for Granite (3 on the VM) |
+| `POLYROUTE_USE_GRANITE=0` | Skip Granite and use the template explanation (fast; for quick tests) |
+| `POLYROUTE_HOST`, `POLYROUTE_PORT` | Where the backend listens (`0.0.0.0`, `8501`) |
+| `POLYROUTE_DEBUG=1` | Flask debug mode; off by default, since its reloader would load Granite twice |
+
+On the VM's three vCPUs, Granite H-1B takes about 6 s to load and about 2 minutes to write an explanation. The
+answer is kept, so the same batch with the same limits is explained instantly the next time.
+
+From the laptop, open a tunnel and use the dashboard at http://localhost:8501:
+```bash
+ssh -L 8501:localhost:8501 linux1@<server-ip>
+```
+`/api/samples` reports `"machine": "s390x"`, and the plain HTML page's footer shows "IBM LinuxONE (s390x)".
+
+---
+
+## Testing from the website
+
+Both pages call the same API, so either can be used. The backend must be running on the VM and the tunnel open.
+
+**Plain HTML page** (served by the backend, nothing to install): open http://localhost:8501.
+
+**React page** (React frontend, runs on the laptop and calls `http://127.0.0.1:8501`, which the tunnel forwards to
+LinuxONE):
+```bash
+curl -fsSL https://bun.sh/install | bash && source ~/.bashrc     # once; npm install fails on this project
+cd src/dashboard/frontend
+bun install                      # if downloading @lovable.dev/... fails: rm bun.lock && bun install
+bun run dev                      # open the URL it prints
+```
+
+Then:
+
+1. Check the badge says **LIVE BACKEND**. **DEMO WORKSPACE** means the page can't reach the backend (backend not
+   running or tunnel closed) and shows illustrative values only.
+2. Under **Or upload photos**, click **Browse** and select several photos of plastic items (hold Ctrl or Cmd to pick
+   more than one).
+3. Choose how the batch is weighed (for example **Weighed**, 50 kg) and keep the facility limits 40 / 10 / 15 kg.
+4. Click **Find routes** and wait. The first batch takes about 2 minutes while Granite writes the explanation.
+5. Check the result: the header reads "Connected: N uploaded photos", every polymer has kilograms and a route, the carbon card
+   shows the saving (or "kg CO2e more than landfill" when the facilities are full), and the explanation line says
+   "Written by IBM Granite in … s".
+
+To see a result without uploading, pick `predictions.json` (the classifier's 491 test photos) from the sample list.
+
+---
+
+## Screenshots
+
+Photos of plastic items uploaded on the dashboard running on LinuxONE: 5 photos (4 plastic, 1 set aside as
+uncertain), batch weighed at 50 kg, plan saves 45.6 kg CO2e.
+
+![Dashboard result for 5 uploaded photos](docs/screenshots/html-photo-upload.png)
+
+The React frontend connected to the LinuxONE backend (LIVE BACKEND), with the explanation written by IBM Granite.
+
+![React dashboard with LIVE BACKEND](docs/screenshots/react-live.png)
+
+The footer confirming the backend runs on IBM LinuxONE (s390x).
+
+![Running on IBM LinuxONE (s390x)](docs/screenshots/s390x-footer.png)
 
 ---
 
@@ -222,6 +357,9 @@ Start the backend on the VM with `POLYROUTE_HOST=0.0.0.0 POLYROUTE_THREADS=3 pyt
 LDPE and PVC are weak and under-represented. The composition estimator is designed for this: given the confusion
 matrix, it corrects the class mix statistically (adjusted classify-and-count) instead of trusting raw counts, and
 widens its intervals accordingly.
+
+**Training evidence.** The record of the classifier's training run is kept on the LinuxONE VM in
+`~/model_evidence_20261018T131542Z` (that is, `/home/linux1/model_evidence_20261018T131542Z`).
 
 ---
 

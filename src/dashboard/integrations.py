@@ -15,6 +15,7 @@ import sys
 
 import os
 import threading
+import types
 from pathlib import Path
 
 from explainer import explainer as _explainer
@@ -73,6 +74,12 @@ def _classifier():
                              "in src/classifying_plastics/models/.")
         if str(CLASSIFIER_DIR) not in sys.path:
             sys.path.insert(0, str(CLASSIFIER_DIR))
+        if "polymer_classifier" not in sys.modules:
+            # Load only the inference modules: the package's __init__ also imports the training and evaluation
+            # tools (scikit-learn, matplotlib, seaborn), which classifying photos doesn't need.
+            package = types.ModuleType("polymer_classifier")
+            package.__path__ = [str(CLASSIFIER_DIR / "polymer_classifier")]
+            sys.modules["polymer_classifier"] = package
         from classify import format_record
         from polymer_classifier.infer import PolymerPredictorTF
         model = PolymerPredictorTF.from_checkpoint(str(keras_file) if keras_file.exists() else None)
