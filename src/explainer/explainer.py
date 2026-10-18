@@ -27,6 +27,7 @@ Rules:
 5. If a plastic had to be sent to a landfill or combusted, point out why (e.g., the recycling facility was full, or that specific plastic isn't recyclable).
 6. DO NOT invent or calculate any numbers. Use only the numbers provided.
 7. DO NOT add comparisons (cars, trees, homes) or reasons that are not in the Engine Notes.
+8. Only give the TOTAL CO2e figure. Never give a CO2e amount for a single plastic; the kg numbers are weights, not CO2e.
 
 <|user|>
 Batch Context: {scenario_name}
