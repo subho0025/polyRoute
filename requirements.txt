@@ -3,6 +3,6 @@ scipy==1.13.1
 pulp==4.0.1
 flask
 flask-cors
-pip install llama-cpp-python
-pip install -r src/classifying_plastics/requirements.txt
-cd src/dashboard/frontend && npm install
+# pip install llama-cpp-python
+# pip install -r src/classifying_plastics/requirements.txt
+# cd src/dashboard/frontend && npm install
