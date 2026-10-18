@@ -14,6 +14,7 @@ import json
 import sys
 
 import os
+import threading
 from pathlib import Path
 
 from explainer import explainer as _explainer
@@ -169,7 +170,17 @@ def _join(names):
     return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
 
 
+# One Granite request at a time: two requests at once would each load the model (4+ GB each) and run
+# out of memory. The second request waits and then reuses the already-loaded model.
+_GRANITE_LOCK = threading.Lock()
+# Granite answers already written, keyed by the exact numbers they explain (same batch + same limits
+# -> same plan -> reuse the answer instantly instead of waiting minutes on a CPU again).
+_GRANITE_ANSWERS = {}
+
+
 def _granite_ready():
+    if os.environ.get("POLYROUTE_USE_GRANITE", "1") == "0":  # POLYROUTE_USE_GRANITE=0 -> always use the template
+        return False
     try:
         import llama_cpp  # noqa: F401
     except ImportError:
@@ -206,8 +217,14 @@ def explain_plan(composition_data, plan_result, batch_name):
             prompt = _explainer.build_granite_messages(batch_name, composition_data, plan_result)
         else:
             prompt = build_granite_prompt(batch_name, composition_data, plan_result)
-        text, seconds = generate_explanation(prompt, plan_result, model_path=GRANITE_MODEL)
+        key = json.dumps([composition_data.get("kg"), plan_result["plan"], plan_result["saved_kgco2e"],
+                          plan_result["notes"]], sort_keys=True)
+        with _GRANITE_LOCK:
+            if key in _GRANITE_ANSWERS:
+                return _GRANITE_ANSWERS[key]
+            text, seconds = generate_explanation(prompt, plan_result, model_path=GRANITE_MODEL)
         fallback = generate_fallback(plan_result["saved_kgco2e"], plan_result["plan"], plan_result["notes"])
         if text and text != fallback:
+            _GRANITE_ANSWERS[key] = (text, "granite", seconds)
             return text, "granite", seconds
     return _template_explanation(plan_result), "template", 0.0
